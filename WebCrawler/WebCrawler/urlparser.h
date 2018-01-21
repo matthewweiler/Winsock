@@ -26,7 +26,7 @@ public:
 	// host: "cs.somepage.edu"
 	string getHost()
 	{
-		// implement here, you may use url.find(...) 
+		// implement here, you may use url.find(...)
 		string temp = url.substr(7, url.length());
 
 		regex rgx("[^:/][^:/]*");

@@ -27,10 +27,10 @@
     <ClInclude Include="common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="urlparser.h">
+    <ClInclude Include="weiler-conrad-gore-winsock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="winsock.h">
+    <ClInclude Include="weiler-conrad-gore-urlparser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,7 +41,7 @@
     <ClCompile Include="WebCrawler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="weiler-conrad-gore-main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

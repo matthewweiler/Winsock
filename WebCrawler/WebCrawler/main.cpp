@@ -27,7 +27,6 @@ int main(int argc, char **argv)
 	ws.connectToServer(host, port);
 
 
-
 	// construct a GET or HEAD request (in a string), send request
 	string GET = "GET " + path + " HTTP/1.0\nHost: " + host + "\n\n";
 	cout << GET;

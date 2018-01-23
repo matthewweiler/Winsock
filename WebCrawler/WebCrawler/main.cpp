@@ -41,12 +41,12 @@ int main(int argc, char **argv)
 
 	// parse url to get host name, port, path, and so on.
 
-	string hostIP = "131.238.72.77";  // udayton.edu's IP
-	ws.createTCPSocket();
-	ws.connectToServerIP(hostIP, port);
+	//string hostIP = "131.238.72.77";  // udayton.edu's IP
+	//ws.createTCPSocket();
+	//ws.connectToServerIP(hostIP, port);
 	// construct a GET or HEAD request (in a string), send request
 	// receive reply
-	ws.closeSocket();
+	//ws.closeSocket();
 
 	Winsock::cleanUp();
 

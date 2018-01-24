@@ -16,4 +16,4 @@ Project Details:
 
 Notes:
 	We have included a smaple screenshot of the and of the html captured and then also have included the .sln file so that you can run the code in
-		Visual Studio if you so wish. To run the code, compile together in Visual Studio and run from the main.cpp file.
+		Visual Studio if you so wish. To run the code, compile together in Visual Studio and run from the weiler-conrad-gore-main.cpp file.

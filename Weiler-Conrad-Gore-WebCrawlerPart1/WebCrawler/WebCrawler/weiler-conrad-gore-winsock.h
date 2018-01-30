@@ -121,7 +121,7 @@ public:
 		FD_SET(sock, &Reader);
 
 		struct timeval timeout;
-		timeout.tv_sec = 20000;
+		timeout.tv_sec = 10;
 		timeout.tv_usec = 0;
 
 		resp = "";

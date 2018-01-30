@@ -12,35 +12,30 @@ unordered_set<string> HostsUnique;
 unordered_set<string> IPUnique;
 ifstream fin;
 ofstream fout;
-enum Request {robot, head, getr};
+enum Request { robot, head, getr };
 
 bool UniqueHost(string host) {
-	std::unordered_set<std::string>::const_iterator it = HostsUnique.find(host);
-	if (it == HostsUnique.end()) {
+	// if not in set
+	if (HostsUnique.find(host) == HostsUnique.end()) {
 		HostsUnique.insert(host);
 		return true;
 	}
-	else {
-		return false;
-	}
+	return false;
 }
 
 bool UniqueIP(string host) {
-	struct hostent *remote;
-	if ((remote = gethostbyname(host.c_str())) == NULL)
-	{
+	struct hostent *remote = gethostbyname(host.c_str());
+	if (remote == NULL) {
 		cout << "Invalid host name string: not FQDN\n" << endl;
-		return false;  // 1 means failed
+		return false;
 	}
 	else {
-		std::unordered_set<std::string>::const_iterator it = IPUnique.find(remote->h_name);
-		if (it == IPUnique.end()) {
+		// if IP not in set
+		if (IPUnique.find(remote->h_name) == IPUnique.end()) {
 			IPUnique.insert(remote->h_name);
 			return true;
 		}
-		else {
-			return false;
-		}
+		return false;
 	}
 }
 

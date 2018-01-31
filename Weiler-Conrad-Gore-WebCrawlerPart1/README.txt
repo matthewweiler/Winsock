@@ -3,9 +3,10 @@ Names: Matthew Weiler, Jonathan Conrad, Joseph Gore
 Project Details:
 
 	Command line arguments:
-		<Number-of-Threads> <filename>
+		<Number-of-Threads> <Path-to-File>
 	NOTE*: the first command line argument is not implemented yet so there is only 1 thread in this example. Please just use 1 for the
-			<Number-of-Threads> Command line argument.
+			<Number-of-Threads> Command line argument. Also note that the input file is not included as it can use any.
+			arbitrary urls file that is line separated.
 
 	
 	Requirements Fullfilled:

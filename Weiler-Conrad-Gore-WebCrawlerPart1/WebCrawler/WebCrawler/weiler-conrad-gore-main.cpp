@@ -9,34 +9,48 @@
 #include "weiler-conrad-gore-urlparser.h"
 
 unordered_set<string> HostsUnique;
-unordered_set<string> IPUnique;
+unordered_set<DWORD> IPUnique;
 ifstream fin;
 ofstream fout;
 enum Request { robot, head, getr };
 
+
+
+DWORD getIP(string host) {
+	struct sockaddr_in server;
+	struct hostent * remote;
+	if ((remote = gethostbyname(host.c_str())) == NULL)
+	{
+		printf("Invalid host name string: not FQDN\n");
+		return 1; // 1 means failed
+	}
+	else // take the first IP address and copy into sin_addr
+	{
+		memcpy((char *)&(server.sin_addr), remote->h_addr, remote->h_length);
+	}
+	return server.sin_addr.S_un.S_addr; // return IP in binary version
+}
+
 bool UniqueHost(string host) {
-	// if not in set
+	cout << "Checking host uniqueness... ";
 	if (HostsUnique.find(host) == HostsUnique.end()) {
 		HostsUnique.insert(host);
+		cout << "passed" << endl;
 		return true;
 	}
+	cout << "failed" << endl;
 	return false;
 }
 
-bool UniqueIP(string host) {
-	struct hostent *remote = gethostbyname(host.c_str());
-	if (remote == NULL) {
-		cout << "Invalid host name string: not FQDN\n" << endl;
-		return false;
+bool UniqueIP(DWORD ip) {
+	cout << "Checking IP uniqueness... ";
+	if (IPUnique.find(ip) == IPUnique.end()) {
+		IPUnique.insert(ip);
+		cout << "passed" << endl;
+		return true;
 	}
-	else {
-		// if IP not in set
-		if (IPUnique.find(remote->h_name) == IPUnique.end()) {
-			IPUnique.insert(remote->h_name);
-			return true;
-		}
-		return false;
-	}
+	cout << "failed" << endl;
+	return false;
 }
 
 string constructRequest(Request r, URLParser* p) {
@@ -57,39 +71,71 @@ string getURL() {
 	return "";
 }
 
-void ConnectandSend(URLParser parser, Winsock wss) {
-	//Winsock::initialize();	// initialize 
+int ConnectandSend(URLParser parser, DWORD IP) {
+	Winsock wss;
+	if (wss.createTCPSocket() == 0) {
+		short port = parser.getPort();
+		if (wss.connectToServerIP(IP, port) == 0) {
+			string req = constructRequest(robot, &parser);
+			cout << "Connecting on robots... ";
+			int sendErr = wss.sendRequest(req);
+			cout << "done in ___" << endl;
+			cout << "Loading... ";
+			if (sendErr == 0) {
+				string response = "";
+				int received = wss.receive(response);
+				cout << "done in ___ with ___ bytes" << endl;
+				cout << "Verifying Header... " << endl;
+				if (received == 0 && response[9] == '4') {
+					Winsock ws;
+					if (ws.createTCPSocket() == 0) {
+						if (ws.connectToServerIP(IP, port) == 0) {
+							response = "";
+							req = constructRequest(getr, &parser);
+							cout << "Connecting on page... ";
+							if (ws.sendRequest(req) == 0) {
+								cout << "done in __" << endl;
+								cout << "Loading... ";
+								int received = ws.receive(response);
+								if (received != 0) {
+									cout << "failed something went wrong with the get request.";
+								}
+								else {
+									cout << "done in ___ with ___ bytes" << endl;
+									cout << response << endl;
+								}
+							}
+							else {
+								cout << "failed connection" << endl;
+							}
+						}
+					}
+					else {
+						cout << "failed to create socked to the server for Get Request." << endl;
+						return 1;
+					}
+					ws.closeSocket();
+				}
+				else if (received == 2) {
+					cout << "failed with slow download." << endl;
+				}
 
-	//Winsock ws;
-	string host = parser.getHost();
-	short port = parser.getPort();
-	string path = parser.getPath();
-	string query = parser.getQuery();
-
-	// the following shows how to use winsock functions
-	//wss.createTCPSocket();
-	wss.connectToServer(host, port);
-
-	// test for robot file
-	string req = constructRequest(getr, &parser);
-	wss.sendRequest(req);
-
-	// receive robot reply
-	string response = "";
-	int received = wss.receive(response);
-	if (received == 0) {
-		cout << response << endl;
+			}
+			else {
+				cout << "failed with robots send error." << endl;
+			}
+		}
+		else {
+			cout << "Failed to connect to the server." << endl;
+			return 1;
+		}
 	}
-	else if (received == 2) {
-		cout << "Did not receive response within allotted time.\n";
+	else {
+		cout << "Failed to create socket to the server." << endl;
+		return 1;
 	}
-
-	//if no robot, send get request
-	//else, do not send request
-
-	//wss.closeSocket();
-	// parse url to get host name, port, path, and so on.
-	//Winsock::cleanUp();
+	wss.closeSocket();
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -119,20 +165,24 @@ int main(int argc, char **argv)
 	}
 
 	//Do crawling logic here
+	Winsock::initialize();
 	string url = getURL();
 	while (url.compare("") != 0) {
-		Winsock::initialize();	// initialize
-		Winsock ws;
-		ws.createTCPSocket();
 		URLParser parser(url);
-		if (UniqueHost(parser.getHost()) && UniqueIP(parser.getHost())) {
-			ConnectandSend(parser, ws);
+		cout << "URL: " + url << endl;
+		cout << "Parsing URL... host " + parser.getHost() + ", port " + std::to_string(parser.getPort()) << endl;
+		bool UH = UniqueHost(parser.getHost());
+		cout << "Doing DNS...";
+		DWORD ip = getIP(parser.getHost());
+		cout << " done in __, found " + std::to_string(ip) << endl;
+		bool UIP = UniqueIP(ip);
+		if (UH && ip != 1 && UIP) {
+			ConnectandSend(parser, getIP(parser.getHost()));
 		}
-		ws.closeSocket();
-		// parse url to get host name, port, path, and so on.
-		Winsock::cleanUp();
 		url = getURL();
+		cout << endl << endl;
 	}
+	Winsock::cleanUp();
 	///////////////////////////////
 
 	fin.close(); //fout.close();

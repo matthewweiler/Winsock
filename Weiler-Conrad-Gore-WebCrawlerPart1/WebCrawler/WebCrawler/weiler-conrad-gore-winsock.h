@@ -42,37 +42,22 @@ public:
 		return 0;
 	}
 
-	// hostName (e.g., "www.google.com"),  2-byte port (e.g., 80)
-	int connectToServer(string hostName, short port)
+	int connectToServerIP(DWORD IP, short port)
 	{
 		struct sockaddr_in server; // structure for connecting to server
-		struct hostent *remote;    // structure used in DNS lookups: convert host name into IP address
-
-		if ((remote = gethostbyname(hostName.c_str())) == NULL)
-		{
-			printf("Invalid host name string: not FQDN\n");
-			return 1;  // 1 means failed
-		}
-		else // take the first IP address and copy into sin_addr
-		{
-			memcpy((char *)&(server.sin_addr), remote->h_addr, remote->h_length);
-		}
-
-		// setup the port # and protocol type
-		server.sin_family = AF_INET;  // IPv4
+		server.sin_addr.S_un.S_addr = IP; // directly drop its tinary sersion into sin_addr
+										  // setup the port # and protocol type
+		server.sin_family = AF_INET; // IPv4
 		server.sin_port = htons(port);// host-to-network flips the byte order
-
-		// connect to the server 
 		if (connect(sock, (struct sockaddr*) &server, sizeof(struct sockaddr_in)) == SOCKET_ERROR)
 		{
-			printf("Connection error: %d\n", WSAGetLastError());
-			return 1;
+			printf("Connection error: %d\n", WSAGetLastError()); return 1;
 		}
-		printf("Successfully connected to %s (%s) on port %d\n", hostName.c_str(), inet_ntoa(server.sin_addr),
-			htons(server.sin_port));
+		printf("Successfully connected to %s on port %d\n", inet_ntoa(server.sin_addr), htons(server.sin_port));
 		return 0;
 	}
 
+	/*
 	// dot-separated hostIP (e.g., "132.11.22.2"), 2-byte port(e.g., 80)
 	int connectToServerIP(string hostIP, short port)
 	{
@@ -103,6 +88,7 @@ public:
 
 		return 0;
 	}
+	*/
 
 
 	// define your sendRequest(...) function, to send a HEAD or GET request

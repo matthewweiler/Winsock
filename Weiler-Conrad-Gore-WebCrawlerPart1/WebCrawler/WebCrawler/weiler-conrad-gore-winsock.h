@@ -42,7 +42,7 @@ public:
 		return 0;
 	}
 
-	int connectToServerIP(DWORD IP, short port)
+	int connectToServerIP(DWORD IP, short port, string &mess)
 	{
 		struct sockaddr_in server; // structure for connecting to server
 		server.sin_addr.S_un.S_addr = IP; // directly drop its tinary sersion into sin_addr
@@ -51,9 +51,12 @@ public:
 		server.sin_port = htons(port);// host-to-network flips the byte order
 		if (connect(sock, (struct sockaddr*) &server, sizeof(struct sockaddr_in)) == SOCKET_ERROR)
 		{
-			printf("Connection error: %d\n", WSAGetLastError()); return 1;
+			int error = WSAGetLastError();
+			mess += "Connection error: " + to_string(error) + "\n"; 
+			return 1;
 		}
-		printf("Successfully connected to %s on port %d\n", inet_ntoa(server.sin_addr), htons(server.sin_port));
+		string inet = inet_ntoa(server.sin_addr);
+		mess += "Successfully connected to " + inet + " on port " + to_string(htons(server.sin_port)) + "\n";
 		return 0;
 	}
 

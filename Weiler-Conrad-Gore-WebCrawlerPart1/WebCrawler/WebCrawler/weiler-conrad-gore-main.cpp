@@ -7,14 +7,44 @@
 #include <unordered_set>
 #include "weiler-conrad-gore-winsock.h"
 #include "weiler-conrad-gore-urlparser.h"
+#include <mutex>
 
 unordered_set<string> HostsUnique;
 unordered_set<DWORD> IPUnique;
 ifstream fin;
 ofstream fout;
+mutex mutexPrint;
+mutex robots;
+mutex pages;
+int URLCount = 0;
+int DNSNum = 0;
+int robotsNum = 0;
+int pagesNum = 0;
 enum Request { robot, head, getr };
 
+class Parameters {
+public:
+	HANDLE mutex;
+	HANDLE eventQuit;
+};
 
+void printSafe(string s) {
+	mutexPrint.lock();
+	cout << s << flush;
+	mutexPrint.unlock();
+}
+
+void incRobots() {
+	robots.lock();
+	robotsNum++;
+	robots.unlock();
+}
+
+void incPages() {
+	pages.lock();
+	pagesNum++;
+	pages.unlock();
+}
 
 DWORD getIP(string host) {
 	struct sockaddr_in server;
@@ -32,24 +62,18 @@ DWORD getIP(string host) {
 }
 
 bool UniqueHost(string host) {
-	cout << "Checking host uniqueness... ";
 	if (HostsUnique.find(host) == HostsUnique.end()) {
 		HostsUnique.insert(host);
-		cout << "passed" << endl;
 		return true;
 	}
-	cout << "failed" << endl;
 	return false;
 }
 
 bool UniqueIP(DWORD ip) {
-	cout << "Checking IP uniqueness... ";
 	if (IPUnique.find(ip) == IPUnique.end()) {
 		IPUnique.insert(ip);
-		cout << "passed" << endl;
 		return true;
 	}
-	cout << "failed" << endl;
 	return false;
 }
 
@@ -71,76 +95,150 @@ string getURL() {
 	return "";
 }
 
-int ConnectandSend(URLParser parser, DWORD IP) {
+int ConnectandSend(URLParser parser, DWORD IP, string &mess) {
 	Winsock wss;
 	if (wss.createTCPSocket() == 0) {
 		short port = parser.getPort();
-		if (wss.connectToServerIP(IP, port) == 0) {
+		if (wss.connectToServerIP(IP, port, mess) == 0) {
 			string req = constructRequest(robot, &parser);
-			cout << "Connecting on robots... ";
+			mess += "Connecting on robots... ";
 			int sendErr = wss.sendRequest(req);
-			cout << "done in ___" << endl;
-			cout << "Loading... ";
+			mess += "done in ___\n";
+			mess += "Loading... ";
 			if (sendErr == 0) {
+				incRobots();
 				string response = "";
 				int received = wss.receive(response);
-				cout << "done in ___ with ___ bytes" << endl;
-				cout << "Verifying Header... " << endl;
+				mess += "done in ___ with ___ bytes\n";
+				mess += "Verifying Header... \n";
 				if (received == 0 && response[9] == '4') {
 					Winsock ws;
 					if (ws.createTCPSocket() == 0) {
-						if (ws.connectToServerIP(IP, port) == 0) {
+						if (ws.connectToServerIP(IP, port, mess) == 0) {
 							response = "";
-							req = constructRequest(getr, &parser);
-							cout << "Connecting on page... ";
-							if (ws.sendRequest(req) == 0) {
-								cout << "done in __" << endl;
-								cout << "Loading... ";
+							string req2 = constructRequest(getr, &parser);
+							mess += "Connecting on page... ";
+							if (ws.sendRequest(req2) == 0) {
+								mess += "done in __\n";
+								mess += "Loading... ";
 								int received = ws.receive(response);
 								if (received != 0) {
-									cout << "failed something went wrong with the get request.";
+									mess += "failed something went wrong with the get request.";
 								}
 								else {
-									cout << "done in ___ with ___ bytes" << endl;
-									cout << response << endl;
+									incPages();
+									mess += "done in ___ with ___ bytes\n";
+									mess += response + "\n";
 								}
 							}
 							else {
-								cout << "failed connection" << endl;
+								mess += "failed connection\n";
 							}
 						}
 					}
 					else {
-						cout << "failed to create socked to the server for Get Request." << endl;
+						mess += "failed to create socked to the server for Get Request.\n";
 						return 1;
 					}
 					ws.closeSocket();
 				}
 				else if (received == 2) {
-					cout << "failed with slow download." << endl;
+					mess += "failed with slow download.\n";
 				}
 
 			}
 			else {
-				cout << "failed with robots send error." << endl;
+				mess += "failed with robots send error.\n";
 			}
 		}
 		else {
-			cout << "Failed to connect to the server." << endl;
+			mess += "Failed to connect to the server.\n";
 			return 1;
 		}
 	}
 	else {
-		cout << "Failed to create socket to the server." << endl;
+		mess += "Failed to create socket to the server.\n";
 		return 1;
 	}
 	wss.closeSocket();
 	return 0;
 }
 
+UINT thread_fun(LPVOID pParam) {
+	Parameters *p = (Parameters *)pParam;
+	HANDLE arr[] = { p->eventQuit, p->mutex };
+	string message;
+	while (true)
+	{
+		if (WaitForMultipleObjects(2, arr, false, INFINITE)
+			== WAIT_OBJECT_0)
+			break;
+		else // this thread obtains p->mutex
+		{
+			message = "";
+			string url = getURL();
+			if (url.compare("") != 0) {
+				URLCount++;
+				URLParser parser(url);
+				message += "URL: " + url + "\n";
+				message += "Parsing URL... host " + parser.getHost() + ", port " + std::to_string(parser.getPort()) + "\n";
+
+				//Use Mutex here to get keep away from 
+				message += "Checking host uniqueness... ";
+				bool UH = UniqueHost(parser.getHost());
+				if (UH) {
+					message += "passed\n";
+				}
+				else {
+					message += "failed\n";
+					printSafe(message);
+					continue;
+				}
+
+				message += "Doing DNS...\n";
+				DWORD ip = getIP(parser.getHost());
+				if (ip == 1) {
+					message += "failed\n";
+					printSafe(message);
+					continue;
+				}
+
+				DNSNum++;
+				message += " done in __, found " + std::to_string(ip) + "\n";
+
+				//Use Mutex here to get keep away from 
+				message += "Checking IP uniqueness... ";
+				bool UIP = UniqueIP(ip);
+				if (UIP) {
+					message += "passed\n";
+				}
+				else {
+					message += "failed\n";
+					printSafe(message);
+					continue;
+				}
+
+				//release mutex
+				ReleaseMutex(p->mutex);
+
+				if (UH && ip != 1 && UIP) {
+					ConnectandSend(parser, getIP(parser.getHost()), message);
+					printSafe(message);
+				}
+			}
+			else {
+				SetEvent(p->eventQuit);
+			}
+
+		}
+	}
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
-	int numThreads = 0; string filename = ""; // include<string>
+	int numThreads = 0; 
+	string filename = ""; // include<string>
 	if (argc > 1)
 	{
 		numThreads = atoi(argv[1]);
@@ -164,28 +262,29 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	//Do crawling logic here
+	Parameters p;
+	p.mutex = CreateMutex(NULL, 0, NULL);
+	p.eventQuit = CreateEvent(NULL, true, false, NULL);
+
+	//If doesn't work, initialize within each thread
 	Winsock::initialize();
-	string url = getURL();
-	while (url.compare("") != 0) {
-		URLParser parser(url);
-		cout << "URL: " + url << endl;
-		cout << "Parsing URL... host " + parser.getHost() + ", port " + std::to_string(parser.getPort()) << endl;
-		bool UH = UniqueHost(parser.getHost());
-		cout << "Doing DNS...";
-		DWORD ip = getIP(parser.getHost());
-		cout << " done in __, found " + std::to_string(ip) << endl;
-		bool UIP = UniqueIP(ip);
-		if (UH && ip != 1 && UIP) {
-			ConnectandSend(parser, getIP(parser.getHost()));
-		}
-		url = getURL();
-		cout << endl << endl;
+
+	for (int i = 0; i < numThreads; ++i) {
+		CreateThread(NULL, 4096, (LPTHREAD_START_ROUTINE)thread_fun, &p, 0, NULL);
 	}
+	
+	WaitForSingleObject(p.eventQuit, INFINITE);
+
+	//Implement Multithreading here
 	Winsock::cleanUp();
 	///////////////////////////////
 
 	fin.close(); //fout.close();
+
+	cout << "Extracted " + to_string(URLCount) + " @ _______/s\n";
+	cout << "Looked up " + to_string(DNSNum) + "@ _________/s\n";
+	cout << "Downloaded " + to_string(robotsNum) + " robots @ _______/s\n";
+	cout << "Crawled " + to_string(pagesNum) + " pages @ _________/s\n";
 
 	cout << "Enter any key to continue ...\n";
 	getchar();

@@ -13,9 +13,7 @@ unordered_set<string> HostsUnique;
 unordered_set<DWORD> IPUnique;
 ifstream fin;
 ofstream fout;
-mutex mutexPrint;
-mutex robots;
-mutex pages;
+mutex mutexPrint, robots, pages, dns, peeLookup, hstLookup;
 int URLCount = 0;
 int DNSNum = 0;
 int robotsNum = 0;
@@ -32,6 +30,12 @@ void printSafe(string s) {
 	mutexPrint.lock();
 	cout << s << flush;
 	mutexPrint.unlock();
+}
+
+void incDNS() {
+	dns.lock();
+	DNSNum++;
+	dns.unlock();
 }
 
 void incRobots() {
@@ -51,7 +55,7 @@ DWORD getIP(string host) {
 	struct hostent * remote;
 	if ((remote = gethostbyname(host.c_str())) == NULL)
 	{
-		printf("Invalid host name string: not FQDN\n");
+		//printf("Invalid host name string: not FQDN\n");
 		return 1; // 1 means failed
 	}
 	else // take the first IP address and copy into sin_addr
@@ -62,18 +66,24 @@ DWORD getIP(string host) {
 }
 
 bool UniqueHost(string host) {
+	hstLookup.lock();
 	if (HostsUnique.find(host) == HostsUnique.end()) {
 		HostsUnique.insert(host);
+		hstLookup.unlock();
 		return true;
 	}
+	hstLookup.unlock();
 	return false;
 }
 
 bool UniqueIP(DWORD ip) {
+	peeLookup.lock();
 	if (IPUnique.find(ip) == IPUnique.end()) {
 		IPUnique.insert(ip);
+		peeLookup.unlock();
 		return true;
 	}
+	peeLookup.unlock();
 	return false;
 }
 
@@ -96,6 +106,42 @@ string getURL() {
 }
 
 int ConnectandSend(URLParser parser, DWORD IP, string &mess) {
+
+	//Check for host uniqueness
+	mess += "Checking host uniqueness... ";
+	bool UH = UniqueHost(parser.getHost());
+	if (UH) {
+		mess += "passed\n";
+	}
+	else {
+		mess += "failed\n";
+		return -1;
+	}
+
+	//Do DNS lookup
+	mess += "Doing DNS...\n";
+	DWORD ip = getIP(parser.getHost());
+	if (ip == 1) {
+		mess += "failed\n";
+		return -1;
+	}
+
+	incDNS();
+	mess += " done in __, found " + std::to_string(ip) + "\n";
+
+	//Check for host uniqueness
+	mess += "Checking IP uniqueness... ";
+	bool UIP = UniqueIP(ip);
+	if (UIP) {
+		mess += "passed\n";
+	}
+	else {
+		mess += "failed\n";
+		//printSafe(mess);
+		return -1;
+	}
+
+	//Now you can send
 	Winsock wss;
 	if (wss.createTCPSocket() == 0) {
 		short port = parser.getPort();
@@ -106,12 +152,14 @@ int ConnectandSend(URLParser parser, DWORD IP, string &mess) {
 			mess += "done in ___\n";
 			mess += "Loading... ";
 			if (sendErr == 0) {
-				incRobots();
 				string response = "";
 				int received = wss.receive(response);
 				mess += "done in ___ with ___ bytes\n";
 				mess += "Verifying Header... \n";
-				if (received == 0 && response[9] == '4') {
+				if (received == 0) {
+					incRobots();
+				}
+				if (received == 0 && response[9] != '2') {
 					Winsock ws;
 					if (ws.createTCPSocket() == 0) {
 						if (ws.connectToServerIP(IP, port, mess) == 0) {
@@ -183,48 +231,11 @@ UINT thread_fun(LPVOID pParam) {
 				message += "URL: " + url + "\n";
 				message += "Parsing URL... host " + parser.getHost() + ", port " + std::to_string(parser.getPort()) + "\n";
 
-				//Use Mutex here to get keep away from 
-				message += "Checking host uniqueness... ";
-				bool UH = UniqueHost(parser.getHost());
-				if (UH) {
-					message += "passed\n";
-				}
-				else {
-					message += "failed\n";
-					printSafe(message);
-					continue;
-				}
-
-				message += "Doing DNS...\n";
-				DWORD ip = getIP(parser.getHost());
-				if (ip == 1) {
-					message += "failed\n";
-					printSafe(message);
-					continue;
-				}
-
-				DNSNum++;
-				message += " done in __, found " + std::to_string(ip) + "\n";
-
-				//Use Mutex here to get keep away from 
-				message += "Checking IP uniqueness... ";
-				bool UIP = UniqueIP(ip);
-				if (UIP) {
-					message += "passed\n";
-				}
-				else {
-					message += "failed\n";
-					printSafe(message);
-					continue;
-				}
-
 				//release mutex
 				ReleaseMutex(p->mutex);
 
-				if (UH && ip != 1 && UIP) {
-					ConnectandSend(parser, getIP(parser.getHost()), message);
-					printSafe(message);
-				}
+				ConnectandSend(parser, getIP(parser.getHost()), message);
+				//printSafe(message);
 			}
 			else {
 				SetEvent(p->eventQuit);
@@ -281,8 +292,10 @@ int main(int argc, char **argv)
 
 	fin.close(); //fout.close();
 
+	Sleep(5000);
+
 	cout << "Extracted " + to_string(URLCount) + " @ _______/s\n";
-	cout << "Looked up " + to_string(DNSNum) + "@ _________/s\n";
+	cout << "Looked up " + to_string(DNSNum) + " @ _________/s\n";
 	cout << "Downloaded " + to_string(robotsNum) + " robots @ _______/s\n";
 	cout << "Crawled " + to_string(pagesNum) + " pages @ _________/s\n";
 

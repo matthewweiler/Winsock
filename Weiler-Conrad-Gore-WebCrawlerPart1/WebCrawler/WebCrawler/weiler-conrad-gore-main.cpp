@@ -53,6 +53,7 @@ void incPages() {
 DWORD getIP(string host) {
 	struct sockaddr_in server;
 	struct hostent * remote;
+	//Exception hadling for access violation writing location
 	if ((remote = gethostbyname(host.c_str())) == NULL)
 	{
 		//printf("Invalid host name string: not FQDN\n");
@@ -154,12 +155,12 @@ int ConnectandSend(URLParser parser, DWORD IP, string &mess) {
 			if (sendErr == 0) {
 				string response = "";
 				int received = wss.receive(response);
-				mess += "done in ___ with ___ bytes\n";
-				mess += "Verifying Header... \n";
 				if (received == 0) {
 					incRobots();
 				}
 				if (received == 0 && response[9] != '2') {
+					mess += "done in ___ with ___ bytes\n";
+					mess += "Verifying Header... \n";
 					Winsock ws;
 					if (ws.createTCPSocket() == 0) {
 						if (ws.connectToServerIP(IP, port, mess) == 0) {

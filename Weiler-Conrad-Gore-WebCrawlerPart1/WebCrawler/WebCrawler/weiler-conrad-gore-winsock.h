@@ -116,24 +116,31 @@ public:
 		resp = "";
 		int bytes = 0;
 		char buf[1024];
-		do{
-			if (sizeof(resp) > 2 * 1024 * 1024) {
-				return 4;
-			}
-			if (select(0, &Reader, NULL, NULL, &timeout) > 0){
-				if ((bytes = recv(sock, buf, 1024 - 1, 0)) == SOCKET_ERROR){
-					//printf("failed with %d on recv\n", WSAGetLastError());
-					return 1;
+		try {
+			do {
+				if (sizeof(resp) > 2 * 1024 * 1024) {
+					return 4;
 				}
-				else if (bytes > 0){
-					buf[bytes] = 0;
-					resp += buf;
+				if (select(0, &Reader, NULL, NULL, &timeout) > 0) {
+					if ((bytes = recv(sock, buf, 1024 - 1, 0)) == SOCKET_ERROR) {
+						//printf("failed with %d on recv\n", WSAGetLastError());
+						return 1;
+					}
+					else if (bytes > 0) {
+						buf[bytes] = 0;
+						resp += buf;
+					}
 				}
-			}
-			else {
-				return 2;
-			}
-		} while (bytes > 0);
+				else {
+					return 2;
+				}
+			} while (bytes > 0);
+		}
+		catch (bad_alloc ex) {
+			resp = "";
+			return 4;
+		}
+		
 
 		if (resp.length() == 0) {
 			return 3;

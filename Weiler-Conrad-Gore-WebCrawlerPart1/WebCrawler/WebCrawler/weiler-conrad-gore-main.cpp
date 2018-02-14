@@ -8,17 +8,18 @@
 #include "weiler-conrad-gore-winsock.h"
 #include "weiler-conrad-gore-urlparser.h"
 #include <mutex>
+#include <math.h>
 
 unordered_set<size_t> HostsUnique;
 unordered_set<DWORD> IPUnique;
 ifstream fin;
 ofstream fout;
 mutex mutexPrint, robots, pages, dns, peeLookup, hstLookup, links;
-int URLCount = 0;
-int DNSNum = 0;
-int robotsNum = 0;
-int pagesNum = 0;
-int totLinks = 0;
+long URLCount = 0;
+long DNSNum = 0;
+long robotsNum = 0;
+long pagesNum = 0;
+long totLinks = 0;
 time_t exTime = 0;
 time_t dnsTime = 0;
 time_t robTime = 0;
@@ -229,7 +230,6 @@ int ConnectandSend(URLParser parser, string &mess) {
 										int dis = distance(begin, endr);
 										end = getTime();
 										incLinks(dis, end - start);
-										//mess += response + "\n";
 									}
 								}
 								else {
@@ -286,7 +286,7 @@ UINT thread_fun(LPVOID pParam) {
 				URLCount++;
 				URLParser parser(url);
 				message += "URL: " + url + "\n";
-				message += "Parsing URL... host " + parser.getHost() + ", port " + std::to_string(parser.getPort()) + "\n";
+				message += "Parsing URL... host " + parser.getHost() + ", port " + to_string(parser.getPort()) + "\n";
 				addExtractedTime(end - start);
 
 				//release mutex
@@ -294,7 +294,7 @@ UINT thread_fun(LPVOID pParam) {
 
 				
 				ConnectandSend(parser, message);
-				printSafe(message + "\n");
+				printSafe(message + "\n\n");
 			}
 			else {
 				SetEvent(p->eventQuit);
@@ -338,6 +338,7 @@ int main(int argc, char **argv)
 
 	//If doesn't work, initialize within each thread
 	Winsock::initialize();
+	vector<thread> Threads;
 
 	for (int i = 0; i < numThreads; ++i) {
 		CreateThread(NULL, 4096, (LPTHREAD_START_ROUTINE)thread_fun, &p, 0, NULL);
@@ -351,13 +352,13 @@ int main(int argc, char **argv)
 
 	fin.close(); //fout.close();
 
-	Sleep(5000);
+	Sleep(log2(numThreads) * 100);
 
-	cout << "Extracted " + to_string(URLCount) + " URLs @ " << to_string(exTime / 1000.0) + " s\n";
-	cout << "Looked up " + to_string(DNSNum) + " DNS names @ " << to_string(dnsTime / 1000.0) + " s\n";
-	cout << "Downloaded " + to_string(robotsNum) + " robots @ " << to_string(robTime / 1000.0) + " s\n";
-	cout << "Crawled " + to_string(pagesNum) + " pages @ " << to_string(pageTime / 1000.0) + " s\n";
-	cout << "Parsed " + to_string(totLinks) + " links @ " << to_string(linksTime / 1000.0) + " s\n";
+	printSafe("Extracted " + to_string(URLCount) + " URLs @ " + to_string(exTime / 1000.0) + " s\n");
+	printSafe("Looked up " + to_string(DNSNum) + " DNS names @ " + to_string(dnsTime / 1000.0) + " s\n");
+	printSafe("Downloaded " + to_string(robotsNum) + " robots @ " + to_string(robTime / 1000.0) + " s\n");
+	printSafe("Crawled " + to_string(pagesNum) + " pages @ " + to_string(pageTime / 1000.0) + " s\n");
+	printSafe("Parsed " + to_string(totLinks) + " links @ " + to_string(linksTime / 1000.0) + " s\n");
 
 	cout << "Enter any key to continue ...\n";
 	getchar();

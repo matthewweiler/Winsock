@@ -18,6 +18,10 @@ int URLCount = 0;
 int DNSNum = 0;
 int robotsNum = 0;
 int pagesNum = 0;
+time_t exTime = 0;
+time_t dnsTime = 0;
+time_t robTime = 0;
+
 hash<string> hasher;
 enum Request { robot, head, getr };
 
@@ -33,14 +37,16 @@ void printSafe(string s) {
 	mutexPrint.unlock();
 }
 
-void incDNS() {
+void incDNS(time_t time) {
 	dns.lock();
+	dnsTime += time;
 	DNSNum++;
 	dns.unlock();
 }
 
-void incRobots() {
+void incRobots(time_t time) {
 	robots.lock();
+	robTime += time;
 	robotsNum++;
 	robots.unlock();
 }
@@ -104,6 +110,10 @@ string constructRequest(Request r, URLParser* p) {
 	}
 }
 
+void addExtractedTime(time_t time) {
+	exTime += time;
+}
+
 string getURL() {
 	string url;
 	if (!fin.eof()) {
@@ -114,6 +124,8 @@ string getURL() {
 }
 
 int ConnectandSend(URLParser parser, string &mess) {
+
+	time_t start, end;
 
 	//Check for host uniqueness
 	mess += "Checking host uniqueness... ";
@@ -127,6 +139,7 @@ int ConnectandSend(URLParser parser, string &mess) {
 	}
 
 	//Do DNS lookup
+	start = time(0);
 	mess += "Doing DNS...\n";
 	time_t start = time(0);
 	DWORD ip = getIP(parser.getHost());
@@ -134,8 +147,8 @@ int ConnectandSend(URLParser parser, string &mess) {
 		mess += "failed\n";
 		return -1;
 	}
-
-	incDNS();
+	end = time(0);
+	incDNS(end - start);
 	time_t end = time(0);
 	mess += " done in " + to_string(end - start) + " ms, found " + to_string(ip) + "\n";
 
@@ -161,52 +174,54 @@ int ConnectandSend(URLParser parser, string &mess) {
 			int sendErr = wss.sendRequest(req);
 			end = time(0);
 			mess += "done in " + to_string(end-start) +" ms\n";
-			start = end;
+			start = time(0);
 			mess += "Loading... ";
 			if (sendErr == 0) {
 				string response = "";
 				int received = wss.receive(response);
 				end = time(0);
-				if (received == 0) {
-					incRobots();
+				if (received == 0 && response.length() > 10) {
+					incRobots(end - start);
 					mess += "done in " + to_string(end - start) + "with " + to_string(sizeof(response)) + "bytes\n";
 					mess += "Verifying Header... status code " + response.substr(9, 3) + "\n";
 				}
-				if (received == 0 && response[9] != '2') {
-					Winsock ws;
-					if (ws.createTCPSocket() == 0) {
-						if (ws.connectToServerIP(ip, port, mess) == 0) {
-							response = "";
-							string req2 = constructRequest(getr, &parser);
-							start = time(0);
-							mess += "Connecting on page... ";
-							if (ws.sendRequest(req2) == 0) {
-								end = time(0);
-								mess += "done in " + to_string(end-start) + " ms\n";
-								mess += "Loading... ";
+				if (received == 0) {
+					if (response.length() > 10 && response[9] != '2') {
+						Winsock ws;
+						if (ws.createTCPSocket() == 0) {
+							if (ws.connectToServerIP(ip, port, mess) == 0) {
+								response = "";
+								string req2 = constructRequest(getr, &parser);
 								start = time(0);
-								int received = ws.receive(response);
-								if (received != 0) {
-									mess += "failed something went wrong with the get request.";
+								mess += "Connecting on page... ";
+								if (ws.sendRequest(req2) == 0) {
+									end = time(0);
+									mess += "done in " + to_string(end - start) + " ms\n";
+									mess += "Loading... ";
+									start = time(0);
+									int received = ws.receive(response);
+									if (received != 0) {
+										mess += "failed something went wrong with the get request.";
+									}
+									else {
+										end = time(0);
+										incPages();
+										mess += "done in " + to_string(start - end) + " ms with " + to_string(sizeof(response)) + "bytes\n";
+										//Parse message for success and links. Do not just put response in message
+										mess += response + "\n";
+									}
 								}
 								else {
-									end = time(0);
-									incPages();
-									mess += "done in " + to_string(start - end) + " ms with " + to_string(sizeof(response)) + "bytes\n";
-									//Parse message for success and links. Do not just put response in message
-									mess += response + "\n";
+									mess += "failed connection\n";
 								}
 							}
-							else {
-								mess += "failed connection\n";
-							}
 						}
+						else {
+							mess += "failed to create socked to the server for Get Request.\n";
+							return 1;
+						}
+						ws.closeSocket();
 					}
-					else {
-						mess += "failed to create socked to the server for Get Request.\n";
-						return 1;
-					}
-					ws.closeSocket();
 				}
 				else if (received == 2) {
 					mess += "failed with slow download.\n";
@@ -231,6 +246,7 @@ int ConnectandSend(URLParser parser, string &mess) {
 }
 
 UINT thread_fun(LPVOID pParam) {
+	time_t start, end;
 	Parameters *p = (Parameters *)pParam;
 	HANDLE arr[] = { p->eventQuit, p->mutex };
 	string message;
@@ -242,16 +258,20 @@ UINT thread_fun(LPVOID pParam) {
 		else // this thread obtains p->mutex
 		{
 			message = "";
+			start = time(0);
 			string url = getURL();
 			if (url.compare("") != 0) {
+				end = time(0);
 				URLCount++;
 				URLParser parser(url);
 				message += "URL: " + url + "\n";
 				message += "Parsing URL... host " + parser.getHost() + ", port " + std::to_string(parser.getPort()) + "\n";
+				addExtractedTime(end - start);
 
 				//release mutex
 				ReleaseMutex(p->mutex);
 
+				
 				ConnectandSend(parser, message);
 				//printSafe(message);
 			}
@@ -312,9 +332,9 @@ int main(int argc, char **argv)
 
 	Sleep(5000);
 
-	cout << "Extracted " + to_string(URLCount) + " @ _______/s\n";
-	cout << "Looked up " + to_string(DNSNum) + " @ _________/s\n";
-	cout << "Downloaded " + to_string(robotsNum) + " robots @ _______/s\n";
+	cout << "Extracted " + to_string(URLCount) + " @ " << to_string(exTime) + " ms\n";
+	cout << "Looked up " + to_string(DNSNum) + " @ " << to_string(dnsTime) + " ms\n";
+	cout << "Downloaded " + to_string(robotsNum) + " robots @ " << to_string(robTime) + " ms\n";
 	cout << "Crawled " + to_string(pagesNum) + " pages @ _________/s\n";
 
 	cout << "Enter any key to continue ...\n";

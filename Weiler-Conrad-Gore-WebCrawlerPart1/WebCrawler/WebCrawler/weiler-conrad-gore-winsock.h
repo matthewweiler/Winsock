@@ -141,7 +141,6 @@ public:
 			return 4;
 		}
 		
-
 		if (resp.length() == 0) {
 			return 3;
 		}

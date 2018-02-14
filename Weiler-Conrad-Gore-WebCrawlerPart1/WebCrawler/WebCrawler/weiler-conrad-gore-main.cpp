@@ -9,15 +9,16 @@
 #include "weiler-conrad-gore-urlparser.h"
 #include <mutex>
 
-unordered_set<string> HostsUnique;
+unordered_set<size_t> HostsUnique;
 unordered_set<DWORD> IPUnique;
 ifstream fin;
 ofstream fout;
-mutex mutexPrint, robots, pages, dns, peeLookup, hstLookup;
+mutex mutexPrint, robots, pages, dns, peeLookup, hstLookup, hsh;
 int URLCount = 0;
 int DNSNum = 0;
 int robotsNum = 0;
 int pagesNum = 0;
+hash<string> hasher;
 enum Request { robot, head, getr };
 
 class Parameters {
@@ -50,6 +51,13 @@ void incPages() {
 	pages.unlock();
 }
 
+size_t doHash(string tohash) {
+	hsh.lock();
+	auto num = hasher(tohash);
+	hsh.unlock();
+	return num;
+}
+
 DWORD getIP(string host) {
 	struct sockaddr_in server;
 	struct hostent * remote;
@@ -67,9 +75,10 @@ DWORD getIP(string host) {
 }
 
 bool UniqueHost(string host) {
+	int unique = doHash(host);
 	hstLookup.lock();
-	if (HostsUnique.find(host) == HostsUnique.end()) {
-		HostsUnique.insert(host);
+	if (HostsUnique.find(unique) == HostsUnique.end()) {
+		HostsUnique.insert(unique);
 		hstLookup.unlock();
 		return true;
 	}

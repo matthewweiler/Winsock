@@ -1,0 +1,4 @@
+﻿  weiler-conrad-gore-main.cpp
+c:\users\matthew\dropbox\university-of-dayton\spring2018masters\data-communications\assignment1\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-winsock.h(99): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\matthew\dropbox\university-of-dayton\spring2018masters\data-communications\assignment1\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-main.cpp(78): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  WebCrawler.vcxproj -> C:\Users\Matthew\Dropbox\University-Of-Dayton\Spring2018Masters\Data-Communications\Assignment1\Weiler-Conrad-Gore-WebCrawlerPart1\WebCrawler\x64\Debug\WebCrawler.exe

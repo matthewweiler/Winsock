@@ -1,5 +1,6 @@
 ﻿  weiler-conrad-gore-main.cpp
-c:\users\jonathan\dropbox\cps 470\assignment 1\winsock\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-winsock.h(99): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
-c:\users\jonathan\dropbox\cps 470\assignment 1\winsock\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-main.cpp(61): warning C4244: 'return': conversion from '__int64' to 'int', possible loss of data
-c:\users\jonathan\dropbox\cps 470\assignment 1\winsock\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-main.cpp(87): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-  WebCrawler.vcxproj -> C:\Users\Jonathan\Dropbox\CPS 470\Assignment 1\Winsock\Weiler-Conrad-Gore-WebCrawlerPart1\WebCrawler\x64\Debug\WebCrawler.exe
+c:\users\matthew\dropbox\university-of-dayton\spring2018masters\data-communications\assignment1\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-winsock.h(99): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+c:\users\matthew\dropbox\university-of-dayton\spring2018masters\data-communications\assignment1\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-main.cpp(73): warning C4244: 'return': conversion from '__int64' to 'int', possible loss of data
+c:\users\matthew\dropbox\university-of-dayton\spring2018masters\data-communications\assignment1\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-main.cpp(99): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+c:\users\matthew\dropbox\university-of-dayton\spring2018masters\data-communications\assignment1\weiler-conrad-gore-webcrawlerpart1\webcrawler\webcrawler\weiler-conrad-gore-main.cpp(230): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
+  WebCrawler.vcxproj -> C:\Users\Matthew\Dropbox\University-Of-Dayton\Spring2018Masters\Data-Communications\Assignment1\Weiler-Conrad-Gore-WebCrawlerPart1\WebCrawler\x64\Debug\WebCrawler.exe

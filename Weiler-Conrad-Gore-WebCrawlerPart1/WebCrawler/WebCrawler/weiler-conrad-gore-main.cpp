@@ -13,14 +13,18 @@ unordered_set<size_t> HostsUnique;
 unordered_set<DWORD> IPUnique;
 ifstream fin;
 ofstream fout;
-mutex mutexPrint, robots, pages, dns, peeLookup, hstLookup;
+mutex mutexPrint, robots, pages, dns, peeLookup, hstLookup, links;
 int URLCount = 0;
 int DNSNum = 0;
 int robotsNum = 0;
 int pagesNum = 0;
+int totLinks = 0;
 time_t exTime = 0;
 time_t dnsTime = 0;
 time_t robTime = 0;
+time_t pageTime = 0;
+time_t linksTime = 0;
+regex const linksExp("https?://[^ \t]*");
 
 hash<string> hasher;
 enum Request { robot, head, getr };
@@ -51,10 +55,18 @@ void incRobots(time_t time) {
 	robots.unlock();
 }
 
-void incPages() {
+void incPages(time_t time) {
 	pages.lock();
+	pageTime += time;
 	pagesNum++;
 	pages.unlock();
+}
+
+void incLinks(int number, time_t time) {
+	links.lock();
+	linksTime += time;
+	totLinks += number;
+	links.unlock();
 }
 
 int getTime() {
@@ -72,7 +84,6 @@ DWORD getIP(string host) {
 	//Exception hadling for access violation writing location
 	if ((remote = gethostbyname(host.c_str())) == NULL)
 	{
-		//printf("Invalid host name string: not FQDN\n");
 		return 1; // 1 means failed
 	}
 	else // take the first IP address and copy into sin_addr
@@ -209,9 +220,15 @@ int ConnectandSend(URLParser parser, string &mess) {
 									}
 									else {
 										end = getTime();
-										incPages();
+										incPages(end - start);
 										mess += "done in " + to_string(start - end) + " ms with " + to_string(sizeof(response)) + "bytes\n";
 										//Parse message for success and links. Do not just put response in message
+										start = getTime();
+										auto begin = sregex_iterator(response.begin(), response.end(), linksExp);
+										auto endr = sregex_iterator();
+										int dis = distance(begin, endr);
+										end = getTime();
+										incLinks(dis, end - start);
 										//mess += response + "\n";
 									}
 								}
@@ -336,10 +353,11 @@ int main(int argc, char **argv)
 
 	Sleep(5000);
 
-	cout << "Extracted " + to_string(URLCount) + " @ " << to_string(exTime) + " ms\n";
-	cout << "Looked up " + to_string(DNSNum) + " @ " << to_string(dnsTime) + " ms\n";
-	cout << "Downloaded " + to_string(robotsNum) + " robots @ " << to_string(robTime) + " ms\n";
-	cout << "Crawled " + to_string(pagesNum) + " pages @ _________/s\n";
+	cout << "Extracted " + to_string(URLCount) + " URLs @ " << to_string(exTime / 1000.0) + " s\n";
+	cout << "Looked up " + to_string(DNSNum) + " DNS names @ " << to_string(dnsTime / 1000.0) + " s\n";
+	cout << "Downloaded " + to_string(robotsNum) + " robots @ " << to_string(robTime / 1000.0) + " s\n";
+	cout << "Crawled " + to_string(pagesNum) + " pages @ " << to_string(pageTime / 1000.0) + " s\n";
+	cout << "Parsed " + to_string(totLinks) + " links @ " << to_string(linksTime / 1000.0) + " s\n";
 
 	cout << "Enter any key to continue ...\n";
 	getchar();

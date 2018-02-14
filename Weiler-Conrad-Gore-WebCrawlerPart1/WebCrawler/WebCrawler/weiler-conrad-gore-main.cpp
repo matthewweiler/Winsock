@@ -13,7 +13,7 @@ unordered_set<size_t> HostsUnique;
 unordered_set<DWORD> IPUnique;
 ifstream fin;
 ofstream fout;
-mutex mutexPrint, robots, pages, dns, peeLookup, hstLookup, hsh;
+mutex mutexPrint, robots, pages, dns, peeLookup, hstLookup;
 int URLCount = 0;
 int DNSNum = 0;
 int robotsNum = 0;
@@ -52,9 +52,7 @@ void incPages() {
 }
 
 size_t doHash(string tohash) {
-	hsh.lock();
 	auto num = hasher(tohash);
-	hsh.unlock();
 	return num;
 }
 
@@ -75,8 +73,8 @@ DWORD getIP(string host) {
 }
 
 bool UniqueHost(string host) {
-	int unique = doHash(host);
 	hstLookup.lock();
+	int unique = doHash(host);
 	if (HostsUnique.find(unique) == HostsUnique.end()) {
 		HostsUnique.insert(unique);
 		hstLookup.unlock();
@@ -130,6 +128,7 @@ int ConnectandSend(URLParser parser, string &mess) {
 
 	//Do DNS lookup
 	mess += "Doing DNS...\n";
+	time_t start = time(0);
 	DWORD ip = getIP(parser.getHost());
 	if (ip == 1) {
 		mess += "failed\n";
@@ -137,7 +136,8 @@ int ConnectandSend(URLParser parser, string &mess) {
 	}
 
 	incDNS();
-	mess += " done in __, found " + std::to_string(ip) + "\n";
+	time_t end = time(0);
+	mess += " done in " + to_string(end - start) + " ms, found " + to_string(ip) + "\n";
 
 	//Check for host uniqueness
 	mess += "Checking IP uniqueness... ";
@@ -147,7 +147,6 @@ int ConnectandSend(URLParser parser, string &mess) {
 	}
 	else {
 		mess += "failed\n";
-		//printSafe(mess);
 		return -1;
 	}
 
@@ -158,34 +157,43 @@ int ConnectandSend(URLParser parser, string &mess) {
 		if (wss.connectToServerIP(ip, port, mess) == 0) {
 			string req = constructRequest(robot, &parser);
 			mess += "Connecting on robots... ";
+			start = time(0);
 			int sendErr = wss.sendRequest(req);
-			mess += "done in ___\n";
+			end = time(0);
+			mess += "done in " + to_string(end-start) +" ms\n";
+			start = end;
 			mess += "Loading... ";
 			if (sendErr == 0) {
 				string response = "";
 				int received = wss.receive(response);
+				end = time(0);
 				if (received == 0) {
 					incRobots();
+					mess += "done in " + to_string(end - start) + "with " + to_string(sizeof(response)) + "bytes\n";
+					mess += "Verifying Header... status code " + response.substr(9, 3) + "\n";
 				}
 				if (received == 0 && response[9] != '2') {
-					mess += "done in ___ with ___ bytes\n";
-					mess += "Verifying Header... \n";
 					Winsock ws;
 					if (ws.createTCPSocket() == 0) {
 						if (ws.connectToServerIP(ip, port, mess) == 0) {
 							response = "";
 							string req2 = constructRequest(getr, &parser);
+							start = time(0);
 							mess += "Connecting on page... ";
 							if (ws.sendRequest(req2) == 0) {
-								mess += "done in __\n";
+								end = time(0);
+								mess += "done in " + to_string(end-start) + " ms\n";
 								mess += "Loading... ";
+								start = time(0);
 								int received = ws.receive(response);
 								if (received != 0) {
 									mess += "failed something went wrong with the get request.";
 								}
 								else {
+									end = time(0);
 									incPages();
-									mess += "done in ___ with ___ bytes\n";
+									mess += "done in " + to_string(start - end) + " ms with " + to_string(sizeof(response)) + "bytes\n";
+									//Parse message for success and links. Do not just put response in message
 									mess += response + "\n";
 								}
 							}

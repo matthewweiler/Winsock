@@ -80,18 +80,24 @@ size_t doHash(string tohash) {
 }
 
 DWORD getIP(string host) {
-	struct sockaddr_in server;
-	struct hostent * remote;
 	//Exception hadling for access violation writing location
-	if ((remote = gethostbyname(host.c_str())) == NULL)
-	{
-		return 1; // 1 means failed
+	try {
+		struct sockaddr_in server;
+		struct hostent * remote = gethostbyname(host.c_str());
+		if (remote == NULL)
+		{
+			return 1; // 1 means failed
+		}
+		else // take the first IP address and copy into sin_addr
+		{
+			memcpy((char *)&(server.sin_addr), remote->h_addr, remote->h_length);
+		}
+		return server.sin_addr.S_un.S_addr; // return IP in binary version
 	}
-	else // take the first IP address and copy into sin_addr
-	{
-		memcpy((char *)&(server.sin_addr), remote->h_addr, remote->h_length);
+	catch (exception ex) {
+		return 1;
 	}
-	return server.sin_addr.S_un.S_addr; // return IP in binary version
+	
 }
 
 bool UniqueHost(string host) {
@@ -286,15 +292,22 @@ UINT thread_fun(LPVOID pParam) {
 				URLCount++;
 				URLParser parser(url);
 				message += "URL: " + url + "\n";
-				message += "Parsing URL... host " + parser.getHost() + ", port " + to_string(parser.getPort()) + "\n";
-				addExtractedTime(end - start);
+				message += "Parsing URL... ";
+				if (parser.getHost().compare("") == 0){
+					message += "failed\n";
+					ReleaseMutex(p->mutex);
+					//printSafe(message);
+				}
+				else {
+					message += "host " + parser.getHost() + ", port " + to_string(parser.getPort()) + "\n";
+					addExtractedTime(end - start);
 
-				//release mutex
-				ReleaseMutex(p->mutex);
+					//release mutex
+					ReleaseMutex(p->mutex);
 
-				
-				ConnectandSend(parser, message);
-				printSafe(message + "\n\n");
+
+					ConnectandSend(parser, message);
+				}
 			}
 			else {
 				SetEvent(p->eventQuit);

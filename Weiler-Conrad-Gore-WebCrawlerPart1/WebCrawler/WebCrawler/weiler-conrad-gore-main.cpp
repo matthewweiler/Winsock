@@ -57,6 +57,10 @@ void incPages() {
 	pages.unlock();
 }
 
+int getTime() {
+	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 size_t doHash(string tohash) {
 	auto num = hasher(tohash);
 	return num;
@@ -139,18 +143,18 @@ int ConnectandSend(URLParser parser, string &mess) {
 	}
 
 	//Do DNS lookup
-	start = time(0);
-	mess += "Doing DNS...\n";
-	time_t start = time(0);
+	mess += "Doing DNS... ";
+	start = getTime();
 	DWORD ip = getIP(parser.getHost());
 	if (ip == 1) {
 		mess += "failed\n";
 		return -1;
 	}
-	end = time(0);
+	end = getTime();
 	incDNS(end - start);
-	time_t end = time(0);
-	mess += " done in " + to_string(end - start) + " ms, found " + to_string(ip) + "\n";
+	struct in_addr paddr;
+	paddr.S_un.S_addr = ip;
+	mess += " done in " + to_string(end - start) + " ms, found " + inet_ntoa(paddr) + "\n";
 
 	//Check for host uniqueness
 	mess += "Checking IP uniqueness... ";
@@ -170,16 +174,16 @@ int ConnectandSend(URLParser parser, string &mess) {
 		if (wss.connectToServerIP(ip, port, mess) == 0) {
 			string req = constructRequest(robot, &parser);
 			mess += "Connecting on robots... ";
-			start = time(0);
+			start = getTime();
 			int sendErr = wss.sendRequest(req);
-			end = time(0);
+			end = getTime();
 			mess += "done in " + to_string(end-start) +" ms\n";
-			start = time(0);
+			start = getTime();
 			mess += "Loading... ";
 			if (sendErr == 0) {
 				string response = "";
 				int received = wss.receive(response);
-				end = time(0);
+				end = getTime();
 				if (received == 0 && response.length() > 10) {
 					incRobots(end - start);
 					mess += "done in " + to_string(end - start) + "with " + to_string(sizeof(response)) + "bytes\n";
@@ -192,23 +196,23 @@ int ConnectandSend(URLParser parser, string &mess) {
 							if (ws.connectToServerIP(ip, port, mess) == 0) {
 								response = "";
 								string req2 = constructRequest(getr, &parser);
-								start = time(0);
+								start = getTime();
 								mess += "Connecting on page... ";
 								if (ws.sendRequest(req2) == 0) {
-									end = time(0);
+									end = getTime();
 									mess += "done in " + to_string(end - start) + " ms\n";
 									mess += "Loading... ";
-									start = time(0);
+									start = getTime();
 									int received = ws.receive(response);
 									if (received != 0) {
 										mess += "failed something went wrong with the get request.";
 									}
 									else {
-										end = time(0);
+										end = getTime();
 										incPages();
 										mess += "done in " + to_string(start - end) + " ms with " + to_string(sizeof(response)) + "bytes\n";
 										//Parse message for success and links. Do not just put response in message
-										mess += response + "\n";
+										//mess += response + "\n";
 									}
 								}
 								else {
@@ -258,10 +262,10 @@ UINT thread_fun(LPVOID pParam) {
 		else // this thread obtains p->mutex
 		{
 			message = "";
-			start = time(0);
+			start = getTime();
 			string url = getURL();
 			if (url.compare("") != 0) {
-				end = time(0);
+				end = getTime();
 				URLCount++;
 				URLParser parser(url);
 				message += "URL: " + url + "\n";
@@ -273,7 +277,7 @@ UINT thread_fun(LPVOID pParam) {
 
 				
 				ConnectandSend(parser, message);
-				//printSafe(message);
+				printSafe(message + "\n");
 			}
 			else {
 				SetEvent(p->eventQuit);

@@ -115,7 +115,7 @@ string getURL() {
 	return "";
 }
 
-int ConnectandSend(URLParser parser, DWORD IP, string &mess) {
+int ConnectandSend(URLParser parser, string &mess) {
 
 	//Check for host uniqueness
 	mess += "Checking host uniqueness... ";
@@ -155,7 +155,7 @@ int ConnectandSend(URLParser parser, DWORD IP, string &mess) {
 	Winsock wss;
 	if (wss.createTCPSocket() == 0) {
 		short port = parser.getPort();
-		if (wss.connectToServerIP(IP, port, mess) == 0) {
+		if (wss.connectToServerIP(ip, port, mess) == 0) {
 			string req = constructRequest(robot, &parser);
 			mess += "Connecting on robots... ";
 			int sendErr = wss.sendRequest(req);
@@ -172,7 +172,7 @@ int ConnectandSend(URLParser parser, DWORD IP, string &mess) {
 					mess += "Verifying Header... \n";
 					Winsock ws;
 					if (ws.createTCPSocket() == 0) {
-						if (ws.connectToServerIP(IP, port, mess) == 0) {
+						if (ws.connectToServerIP(ip, port, mess) == 0) {
 							response = "";
 							string req2 = constructRequest(getr, &parser);
 							mess += "Connecting on page... ";
@@ -244,7 +244,7 @@ UINT thread_fun(LPVOID pParam) {
 				//release mutex
 				ReleaseMutex(p->mutex);
 
-				ConnectandSend(parser, getIP(parser.getHost()), message);
+				ConnectandSend(parser, message);
 				//printSafe(message);
 			}
 			else {

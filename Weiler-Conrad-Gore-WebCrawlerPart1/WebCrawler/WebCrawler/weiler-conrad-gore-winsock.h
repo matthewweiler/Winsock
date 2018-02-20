@@ -3,6 +3,7 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS  // for inet_addr(), gethostbyname()
 
 #include <winsock2.h>   // the .h file defines all windows socket functions 
+#include <ws2tcpip.h>
 
 #include "common.h"
 

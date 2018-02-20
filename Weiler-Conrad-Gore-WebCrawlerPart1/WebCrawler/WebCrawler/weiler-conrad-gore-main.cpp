@@ -100,6 +100,34 @@ DWORD getIP(string host) {
 	
 }
 
+DWORD getIPinfo(string host) {
+	try {
+		struct addrinfo hints, *res;
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_addrlen = 0;
+		hints.ai_canonname = NULL;
+		hints.ai_addr = NULL;
+		hints.ai_next = NULL;
+		int error = 0;
+		if ((error = getaddrinfo(host.c_str(), NULL, &hints, &res)) != 0) {
+			return 1;
+		} 
+		if (res == NULL) {
+			cout << "Getaddrinfo null" << endl;
+			return 1;
+		}
+		// save pointer to address stored in res and set family and port
+		struct sockaddr_in* serveraddr = (struct sockaddr_in *)res->ai_addr;
+		return serveraddr->sin_addr.S_un.S_addr;
+	} catch (exception e) {
+		cout << e.what() << endl;
+		return 1;
+	}
+	return 1;
+}
+
 bool UniqueHost(string host) {
 	hstLookup.lock();
 	int unique = doHash(host);
@@ -163,7 +191,7 @@ int ConnectandSend(URLParser parser, string &mess) {
 	//Do DNS lookup
 	mess += "Doing DNS... ";
 	start = getTime();
-	DWORD ip = getIP(parser.getHost());
+	DWORD ip = getIPinfo(parser.getHost());
 	if (ip == 1) {
 		mess += "failed\n";
 		return -1;

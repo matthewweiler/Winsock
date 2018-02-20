@@ -36,7 +36,7 @@ public:
 	{
 		sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (sock == INVALID_SOCKET) {
-			printf("socket() error %d\n", WSAGetLastError());
+			//printf("socket() error %d\n", WSAGetLastError());
 			WSACleanup();
 			return 1;
 		}
@@ -61,44 +61,11 @@ public:
 		return 0;
 	}
 
-	/*
-	// dot-separated hostIP (e.g., "132.11.22.2"), 2-byte port(e.g., 80)
-	int connectToServerIP(string hostIP, short port)
-	{
-		struct sockaddr_in server; // structure for connecting to server
-
-		DWORD IP = inet_addr(hostIP.c_str());
-		if (IP == INADDR_NONE)
-		{
-			printf("Invalid IP string: nor IP address\n");
-			return 1;  // 1 means failed						
-		}
-		else
-		{
-			server.sin_addr.S_un.S_addr = IP; // if a valid IP, directly drop its binary version into sin_addr
-		}
-
-		// setup the port # and protocol type
-		server.sin_family = AF_INET;  // IPv4
-		server.sin_port = htons(port);// host-to-network flips the byte order
-
-		if (connect(sock, (struct sockaddr*) &server, sizeof(struct sockaddr_in)) == SOCKET_ERROR)
-		{
-			printf("Connection error: %d\n", WSAGetLastError());
-			return 1;
-		}
-		printf("Successfully connected to %s (%s) on port %d\n", hostIP.c_str(), inet_ntoa(server.sin_addr),
-			htons(server.sin_port));
-
-		return 0;
-	}
-	*/
-
 
 	// define your sendRequest(...) function, to send a HEAD or GET request
 	int sendRequest(string req){
 		if (send(sock, req.c_str(), req.length(), 0) == SOCKET_ERROR){
-			printf("send() error - %d\n", WSAGetLastError());
+			//printf("send() error - %d\n", WSAGetLastError());
 			return 1;
 		}
 		return 0;

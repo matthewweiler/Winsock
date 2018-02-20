@@ -9,7 +9,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>50 C:\Users\Jonathan\Downloads\URL-input-100.txt</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>2000 C:\Users\Matthew\Desktop\testfile.txt</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>
